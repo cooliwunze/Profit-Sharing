@@ -13,7 +13,7 @@
 
 (define-constant contract-deployer tx-sender)
 
-;; Error constants - organized by category
+;; Error constants
 ;; Access Control Errors
 (define-constant ERR-UNAUTHORIZED-ACCESS (err u100))
 (define-constant ERR-BLACKLISTED-STAKEHOLDER (err u101))
@@ -153,7 +153,10 @@
 )
 
 (define-private (validate-principal-address (user-address principal))
-  (if (is-eq user-address user-address)
+  ;; Validate that the principal is not the contract deployer (to prevent self-assignment)
+  ;; and is not the zero address equivalent (contract address)
+  (if (and (not (is-eq user-address contract-deployer))
+           (not (is-eq user-address (as-contract tx-sender))))
     (ok true)
     (err ERR-INVALID-PRINCIPAL-ADDRESS)
   )
@@ -222,7 +225,9 @@
 (define-public (register-new-stakeholder (stakeholder-address principal) (ownership-percentage uint))
   (begin
     (asserts! (<= ownership-percentage maximum-percentage-basis-points) (err ERR-INVALID-PERCENTAGE-VALUE))
-    (try! (validate-principal-address stakeholder-address))
+    (asserts! (not (is-eq stakeholder-address contract-deployer)) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    (asserts! (not (is-eq stakeholder-address (as-contract tx-sender))) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    
     (try! (ensure-contract-deployer-access))
     (try! (ensure-contract-initialized))
     (try! (ensure-distribution-round-inactive))
@@ -247,7 +252,9 @@
   )
     (begin
       (asserts! (<= new-ownership-percentage maximum-percentage-basis-points) (err ERR-INVALID-PERCENTAGE-VALUE))
-      (try! (validate-principal-address stakeholder-address))
+      (asserts! (not (is-eq stakeholder-address contract-deployer)) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+      (asserts! (not (is-eq stakeholder-address (as-contract tx-sender))) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+      
       (try! (ensure-contract-deployer-access))
       (try! (ensure-contract-initialized))
       (try! (ensure-distribution-round-inactive))
@@ -271,7 +278,9 @@
     (stakeholder-percentage (get ownership-percentage current-stakeholder-data))
   )
     (begin
-      (try! (validate-principal-address stakeholder-address))
+      (asserts! (not (is-eq stakeholder-address contract-deployer)) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+      (asserts! (not (is-eq stakeholder-address (as-contract tx-sender))) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+      
       (try! (ensure-contract-deployer-access))
       (try! (ensure-contract-initialized))
       (try! (ensure-distribution-round-inactive))
@@ -293,7 +302,9 @@
 
 (define-public (add-stakeholder-to-blacklist (stakeholder-address principal))
   (begin
-    (try! (validate-principal-address stakeholder-address))
+    (asserts! (not (is-eq stakeholder-address contract-deployer)) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    (asserts! (not (is-eq stakeholder-address (as-contract tx-sender))) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    
     (try! (ensure-contract-deployer-access))
     (try! (ensure-contract-initialized))
     
@@ -304,7 +315,9 @@
 
 (define-public (remove-stakeholder-from-blacklist (stakeholder-address principal))
   (begin
-    (try! (validate-principal-address stakeholder-address))
+    (asserts! (not (is-eq stakeholder-address contract-deployer)) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    (asserts! (not (is-eq stakeholder-address (as-contract tx-sender))) (err ERR-INVALID-PRINCIPAL-ADDRESS))
+    
     (try! (ensure-contract-deployer-access))
     (try! (ensure-contract-initialized))
     
